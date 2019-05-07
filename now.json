@@ -1,5 +1,13 @@
 {
   "name": "spongemock",
   "version": 2,
-  "builds": [{ "src": "index.go", "use": "@now/go" }]
+  "env": {
+    "SLACK_CLIENT_ID": "@slack-client-id",
+    "SLACK_CLIENT_SECRET": "@slack-client-secret"
+  },
+  "builds": [{ "src": "/*.go", "use": "@now/go" }],
+  "routes": [
+    { "src": "/", "dest": "/index.go" },
+    { "src": "/oauth", "dest": "/oauth.go" }
+  ]
 }
