@@ -18,6 +18,8 @@ import (
 type OauthResponse struct {
 	AccessToken string `json:"access_token"`
 	Scope       string `json:"scope"`
+	TeamName    string `json:"team_name"`
+	TeamID      string `json:"team_id"`
 }
 
 // AuthResponse - the response body from https://slack.com/api/auth.test
@@ -29,20 +31,7 @@ type AuthResponse struct {
 
 // Auth - handles the request and send back mocking response
 func Auth(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	params, err := url.ParseQuery(string(body))
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// Extract code from request url
-	code := params.Get("code")
+	code := r.URL.Query().Get("code")
 
 	// Compose authHeader by encoding the string ${client_id}:${client_secret}
 	clientID := os.Getenv("SLACK_CLIENT_ID")
@@ -65,14 +54,18 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildSlackURL(client *http.Client, code, authorization string) (string, error) {
+	// set code
+	params := url.Values{}
+	params.Add("code", code)
+
 	// Hit oauth.access for access_token
-	request, err := http.NewRequest(http.MethodPost, "https://slack.com/api/oauth.access", strings.NewReader(code))
+	request, err := http.NewRequest(http.MethodPost, "https://slack.com/api/oauth.access", strings.NewReader(params.Encode()))
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	request.Header.Set("Authorization", authorization)
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Authorization", authorization)
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	response, err := client.Do(request)
 	if err != nil {
@@ -94,16 +87,14 @@ func buildSlackURL(client *http.Client, code, authorization string) (string, err
 
 	accessToken := oauthResponse.AccessToken
 
-	params := url.Values{}
-	params.Set("token", accessToken)
-
 	// Hit auth.text for slack domain
-	request, err = http.NewRequest(http.MethodPost, "https://slack.com/api/auth.test", strings.NewReader(params.Encode()))
+	request, err = http.NewRequest(http.MethodPost, "https://slack.com/api/auth.test", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	request.Header.Set("Content-Type", "application/json; charset=utf-8")
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	response, err = client.Do(request)
 	if err != nil {
