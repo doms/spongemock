@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // SlackRequest - structure of a request sent from Slack
@@ -34,11 +35,11 @@ type SlackResponse struct {
 // Handler - handles the request and send back mocking response
 func Handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	defer r.Body.Close()
 
 	params, err := url.ParseQuery(string(body))
 	if err != nil {
@@ -56,7 +57,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if strings.Index("<@#", string(word[0])) != -1 {
 			t = append(t, word)
 		} else {
-			t = append(t, spongeMock(word))
+			t = append(t, SpongeMock(word))
 		}
 	}
 
@@ -70,37 +71,27 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	sendSlackNotification(content.ResponseURL, &payload)
 }
 
-func spongeMock(content string) string {
-	originalContent := strings.ToLower(content)
-	var res []string
+// SpongeMock converts strings into sponges
+func SpongeMock(content string) string {
+	buf := []rune(strings.ToLower(content))
 
-	shouldUpcase := true
+	for i, char := range buf {
+		if buf[i] > unicode.MaxASCII {
+			continue
+		}
 
-	for _, char := range originalContent {
-		if char >= 97 && char < 123 {
-			if shouldUpcase {
-				if string(char) == "i" {
-					res = append(res, string(char))
-				} else {
-					res = append(res, string(char-rune(32)))
-				}
-
-				shouldUpcase = false
-			} else {
-				if string(char) == "l" {
-					res = append(res, string(char-rune(32)))
-				} else {
-					res = append(res, string(char))
-				}
-
-				shouldUpcase = true
+		if i%2 == 0 {
+			if string(char) != "i" {
+				buf[i] -= 32
 			}
 		} else {
-			res = append(res, string(char))
+			if string(char) == "l" {
+				buf[i] -= 32
+			}
 		}
 	}
 
-	return strings.Join(res, "")
+	return string(buf)
 }
 
 // sendSlackNotification will post to an 'Incoming Webook' url setup in Slack Apps. It accepts
