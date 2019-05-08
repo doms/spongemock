@@ -49,21 +49,34 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	content.Text = params.Get("text")
 	content.ResponseURL = params.Get("response_url")
 
+	splitContent := strings.Split(content.Text, " ")
+
+	var t []string
+	for _, word := range splitContent {
+		if strings.Index("<@#", string(word[0])) != -1 {
+			t = append(t, word)
+		} else {
+			t = append(t, spongeMock(word))
+		}
+	}
+
+	mockifiedText := strings.Join(t, " ")
+
 	payload := SlackResponse{
 		ResponseType: "in_channel",
-		Text:         spongeMock(string(content.Text)),
+		Text:         mockifiedText,
 	}
 
 	sendSlackNotification(content.ResponseURL, &payload)
 }
 
-func spongeMock(title string) string {
-	originalTitle := strings.ToLower(title)
+func spongeMock(content string) string {
+	originalContent := strings.ToLower(content)
 	var res []string
 
 	shouldUpcase := true
 
-	for _, char := range originalTitle {
+	for _, char := range originalContent {
 		if char >= 97 && char < 123 {
 			if shouldUpcase {
 				if string(char) == "i" {
