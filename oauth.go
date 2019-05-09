@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -61,7 +60,7 @@ func buildSlackURL(client *http.Client, code, authorization string) (string, err
 	// Hit oauth.access for access_token
 	request, err := http.NewRequest(http.MethodPost, "https://slack.com/api/oauth.access", strings.NewReader(params.Encode()))
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	request.Header.Add("Authorization", authorization)
@@ -69,20 +68,19 @@ func buildSlackURL(client *http.Client, code, authorization string) (string, err
 
 	response, err := client.Do(request)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
-
 	defer response.Body.Close()
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	oauthResponse := OauthResponse{}
 	err = json.Unmarshal(body, &oauthResponse)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	accessToken := oauthResponse.AccessToken
@@ -90,7 +88,7 @@ func buildSlackURL(client *http.Client, code, authorization string) (string, err
 	// Hit auth.text for slack domain
 	request, err = http.NewRequest(http.MethodPost, "https://slack.com/api/auth.test", nil)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -98,20 +96,19 @@ func buildSlackURL(client *http.Client, code, authorization string) (string, err
 
 	response, err = client.Do(request)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
-
 	defer response.Body.Close()
 
 	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	authResponse := AuthResponse{}
 	err = json.Unmarshal(body, &authResponse)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	if authResponse.OK {

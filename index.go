@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // SlackRequest - structure of a request sent from Slack
@@ -25,20 +25,20 @@ type SlackRequest struct {
 	ChannelID   string `json:"channel_id,omitempty"`
 }
 
-// SlackResponse - structure of a resposne sent to Slack
+// SlackResponse - structure of a response sent to Slack
 type SlackResponse struct {
 	ResponseType string `json:"response_type"`
 	Text         string `json:"text"`
 }
 
-// Handler - handles the request and send back mocking response
+// Handler - handles the request and sends back mocking response
 func Handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	defer r.Body.Close()
 
 	params, err := url.ParseQuery(string(body))
 	if err != nil {
@@ -53,11 +53,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	var t []string
 	for _, word := range splitContent {
-		if strings.Index("<@#", string(word[0])) != -1 {
-			t = append(t, word)
-		} else {
-			t = append(t, spongeMock(word))
-		}
+		t = append(t, SpongeMock(word))
 	}
 
 	mockifiedText := strings.Join(t, " ")
@@ -70,44 +66,42 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	sendSlackNotification(content.ResponseURL, &payload)
 }
 
-func spongeMock(content string) string {
-	originalContent := strings.ToLower(content)
-	var res []string
+// SpongeMock - converts strings into sponges
+func SpongeMock(content string) string {
+	if content == "" {
+		return ""
+	}
 
-	shouldUpcase := true
+	// ignore mentions (users, channels)
+	if strings.Index("<@#", string(content[0])) != -1 {
+		return content
+	}
 
-	for _, char := range originalContent {
-		if char >= 97 && char < 123 {
-			if shouldUpcase {
-				if string(char) == "i" {
-					res = append(res, string(char))
-				} else {
-					res = append(res, string(char-rune(32)))
-				}
+	buf := []rune(strings.ToLower(content))
 
-				shouldUpcase = false
-			} else {
-				if string(char) == "l" {
-					res = append(res, string(char-rune(32)))
-				} else {
-					res = append(res, string(char))
-				}
+	for i, char := range buf {
+		if buf[i] > unicode.MaxASCII {
+			continue
+		}
 
-				shouldUpcase = true
+		if i%2 == 0 {
+			if string(char) != "i" {
+				buf[i] -= 32
 			}
 		} else {
-			res = append(res, string(char))
+			if string(char) == "l" {
+				buf[i] -= 32
+			}
 		}
 	}
 
-	return strings.Join(res, "")
+	return string(buf)
 }
 
 // sendSlackNotification will post to an 'Incoming Webook' url setup in Slack Apps. It accepts
 // some text and the slack channel is saved within Slack.
 func sendSlackNotification(webhookURL string, payload *SlackResponse) error {
 	slackBody, _ := json.Marshal(payload)
-	fmt.Println(string(slackBody))
 	req, err := http.NewRequest(http.MethodPost, webhookURL, bytes.NewBuffer(slackBody))
 	if err != nil {
 		return err
