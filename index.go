@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,13 +25,13 @@ type SlackRequest struct {
 	ChannelID   string `json:"channel_id,omitempty"`
 }
 
-// SlackResponse - structure of a resposne sent to Slack
+// SlackResponse - structure of a response sent to Slack
 type SlackResponse struct {
 	ResponseType string `json:"response_type"`
 	Text         string `json:"text"`
 }
 
-// Handler - handles the request and send back mocking response
+// Handler - handles the request and sends back mocking response
 func Handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -54,11 +53,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	var t []string
 	for _, word := range splitContent {
-		if strings.Index("<@#", string(word[0])) != -1 {
-			t = append(t, word)
-		} else {
-			t = append(t, SpongeMock(word))
-		}
+		t = append(t, SpongeMock(word))
 	}
 
 	mockifiedText := strings.Join(t, " ")
@@ -71,8 +66,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	sendSlackNotification(content.ResponseURL, &payload)
 }
 
-// SpongeMock converts strings into sponges
+// SpongeMock - converts strings into sponges
 func SpongeMock(content string) string {
+	if content == "" {
+		return ""
+	}
+
+	// ignore mentions (users, channels)
+	if strings.Index("<@#", string(content[0])) != -1 {
+		return content
+	}
+
 	buf := []rune(strings.ToLower(content))
 
 	for i, char := range buf {
@@ -98,7 +102,6 @@ func SpongeMock(content string) string {
 // some text and the slack channel is saved within Slack.
 func sendSlackNotification(webhookURL string, payload *SlackResponse) error {
 	slackBody, _ := json.Marshal(payload)
-	fmt.Println(string(slackBody))
 	req, err := http.NewRequest(http.MethodPost, webhookURL, bytes.NewBuffer(slackBody))
 	if err != nil {
 		return err
