@@ -1,7 +1,6 @@
 package handler_test
 
 import (
-	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -21,6 +20,9 @@ func TestSpongeMock(t *testing.T) {
 			testStr:     "",
 			expectedStr: "",
 		}, {
+			testStr:     "  test  ",
+			expectedStr: "  TeSt  ",
+		}, {
 			testStr:     "こんにちは",
 			expectedStr: "こんにちは",
 		}, {
@@ -39,14 +41,6 @@ func TestSpongeMock(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		splitContent := strings.Split(test.testStr, " ")
-		var res []string
-
-		for _, word := range splitContent {
-			res = append(res, handler.SpongeMock(word))
-		}
-
-		buf := strings.Join(res, " ")
-		assert.Equal(t, buf, test.expectedStr)
+		assert.Equal(t, handler.SpongeMock(test.testStr), test.expectedStr)
 	}
 }
