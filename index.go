@@ -46,7 +46,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	content := SlackRequest{
-		Text: 		 params.Get("text"),
+		Text:        params.Get("text"),
 		ResponseURL: params.Get("response_url"),
 	}
 
@@ -54,7 +54,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		content.ResponseURL,
 		&SlackResponse{
 			ResponseType: "in_channel",
-			Text: 		  SpongeMock(content.Text),
+			Text:         SpongeMock(content.Text),
 		},
 	)
 }
@@ -78,7 +78,7 @@ func SpongeMock(sentence string) string {
 				continue
 			}
 
-			if i % 2 == 0 {
+			if i%2 == 0 {
 				if char != 'i' {
 					buf[i] -= 32
 				}
