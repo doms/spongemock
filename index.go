@@ -45,57 +45,54 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	content := SlackRequest{}
-	content.Text = params.Get("text")
-	content.ResponseURL = params.Get("response_url")
-
-	splitContent := strings.Split(content.Text, " ")
-
-	var t []string
-	for _, word := range splitContent {
-		t = append(t, SpongeMock(word))
+	content := SlackRequest{
+		Text: 		 params.Get("text"),
+		ResponseURL: params.Get("response_url"),
 	}
 
-	mockifiedText := strings.Join(t, " ")
-
-	payload := SlackResponse{
-		ResponseType: "in_channel",
-		Text:         mockifiedText,
-	}
-
-	sendSlackNotification(content.ResponseURL, &payload)
+	sendSlackNotification(
+		content.ResponseURL,
+		&SlackResponse{
+			ResponseType: "in_channel",
+			Text: 		  SpongeMock(content.Text),
+		},
+	)
 }
 
 // SpongeMock - converts strings into sponges
-func SpongeMock(content string) string {
-	if content == "" {
-		return ""
-	}
-
-	// ignore mentions (users, channels)
-	if strings.Index("<@#", string(content[0])) != -1 {
-		return content
-	}
-
-	buf := []rune(strings.ToLower(content))
-
-	for i, char := range buf {
-		if buf[i] > unicode.MaxASCII {
+func SpongeMock(sentence string) string {
+	words := strings.Split(sentence, " ")
+	for i, word := range words {
+		if word == "" {
 			continue
 		}
 
-		if i%2 == 0 {
-			if string(char) != "i" {
-				buf[i] -= 32
+		// ignore mentions (users, channels)
+		if word[0] == '#' || word[0] == '<' || word[0] == '@' {
+			continue
+		}
+
+		buf := []rune(strings.ToLower(word))
+		for i, char := range buf {
+			if buf[i] > unicode.MaxASCII {
+				continue
 			}
-		} else {
-			if string(char) == "l" {
-				buf[i] -= 32
+
+			if i % 2 == 0 {
+				if char != 'i' {
+					buf[i] -= 32
+				}
+			} else {
+				if char == 'l' {
+					buf[i] -= 32
+				}
 			}
 		}
+
+		words[i] = string(buf)
 	}
 
-	return string(buf)
+	return strings.Join(words, " ")
 }
 
 // sendSlackNotification will post to an 'Incoming Webook' url setup in Slack Apps. It accepts
