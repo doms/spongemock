@@ -37,6 +37,18 @@ func TestSpongeMock(t *testing.T) {
 		}, {
 			testStr:     "<USERID|User>",
 			expectedStr: "<USERID|User>",
+		}, {
+			testStr:     "20",
+			expectedStr: "20",
+		}, {
+			testStr:     "20_20",
+			expectedStr: "20_20",
+		}, {
+			testStr:     "2020",
+			expectedStr: "2020",
+		}, {
+			testStr:     "2",
+			expectedStr: "2",
 		},
 	}
 
