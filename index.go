@@ -80,11 +80,11 @@ func SpongeMock(sentence string) string {
 
 			if i%2 == 0 {
 				if char != 'i' {
-					buf[i] -= 32
+					buf[i] = unicode.ToUpper(char)
 				}
 			} else {
 				if char == 'l' {
-					buf[i] -= 32
+					buf[i] = unicode.ToUpper(char)
 				}
 			}
 		}
